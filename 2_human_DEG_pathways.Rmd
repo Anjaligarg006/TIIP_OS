@@ -1,0 +1,274 @@
+Jai Babe Di
+Jai Guru Maa Ji
+
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+setwd("~/Anjali_data/pneumocytes_data/input_file/")
+
+library(ggplot2)
+library("ggsci")
+library("edgeR")
+library("readxl")
+library("matrixStats")
+library("fgsea")
+library("tidyverse")
+library("msigdbr")
+library("clusterProfiler")
+library("ComplexHeatmap")
+library("tidyr")
+library(EnhancedVolcano)
+library(airway)
+library(magrittr)
+set.seed(1234)
+```
+
+
+```{r}
+
+Xdata1 <-read.delim('~/Anjali_data/pneumocytes_data/input_file/hg38/RawCountFile_rsemgenes_hg38.txt',header=TRUE)#RNA Count Data 
+colnames(Xdata1)<- gsub("X","",colnames(Xdata1))
+
+colnames(Xdata1) <- c("gene_id","H_TIIP_1","H_TIIP_2","H_TIIP_3","H_TIIPOS_1","H_TIIPOS_2","H_TIIPOS_3","H_OS_1","H_OS_2" ,"H_OS_3","hFOB_1_19_1","hFOB_1_19_2","hFOB_1_19_3")
+
+Xdata1$gene_id <- sub(".*?_","",Xdata1$gene_id)
+
+# removed duplicated genes
+duplicated_genes <- unique(Xdata1$gene_id[duplicated(Xdata1$gene_id)])
+Xdata1 <- Xdata1[!Xdata1$gene_id %in% duplicated_genes,]
+
+```
+
+
+```{r}
+library(ggplot2)
+
+r1 <- round(cor(Xdata1$H_OS_1, Xdata1$H_OS_2), 2)
+p1 <- cor.test(Xdata1$H_OS_1, Xdata1$H_OS_2)$p.value
+r1
+p1
+ggplot(Xdata1, aes(y=H_OS_1, x=H_OS_2)) + 
+  geom_point() + 
+  geom_smooth(method="lm", col="black") + 
+  annotate("text", x=20, y=4.5, label=paste0("r = ", r1), hjust=0) +
+  annotate("text", x=20, y=4.25, label=paste0("p = ", round(p1, 3)), hjust=0) +
+  theme_classic() 
+
+
+r2 <- round(cor(Xdata1$H_OS_1, Xdata1$H_OS_3), 2)
+p2 <- cor.test(Xdata1$H_OS_1, Xdata1$H_OS_3)$p.value
+r2
+p2
+ggplot(Xdata1, aes(y=H_OS_1, x=H_OS_3)) + 
+  geom_point() + 
+  geom_smooth(method="lm", col="black") + 
+  annotate("text", x=20, y=4.5, label=paste0("r = ", r2), hjust=0) +
+  annotate("text", x=20, y=4.25, label=paste0("p = ", round(p2, 3)), hjust=0) +
+  theme_classic() 
+
+r3 <- round(cor(Xdata1$H_OS_2, Xdata1$H_OS_3), 2)
+p3 <- cor.test(Xdata1$H_OS_2, Xdata1$H_OS_3)$p.value
+r3
+p3
+ggplot(Xdata1, aes(y=H_OS_2, x=H_OS_3)) + 
+  geom_point() + 
+  geom_smooth(method="lm", col="black") + 
+  annotate("text", x=20, y=4.5, label=paste0("r = ", r3), hjust=0) +
+  annotate("text", x=20, y=4.25, label=paste0("p = ", round(p3, 3)), hjust=0) +
+  theme_classic() 
+```
+
+
+
+```{r}
+
+r1 <- round(cor(Xdata1$H_TIIP_1, Xdata1$H_TIIP_2), 2)
+p1 <- cor.test(Xdata1$H_TIIP_1, Xdata1$H_TIIP_2)$p.value
+r1
+p1
+ggplot(Xdata1, aes(y=H_TIIP_1, x=H_TIIP_2)) + 
+  geom_point() + 
+  geom_smooth(method="lm", col="black") + 
+  annotate("text", x=20, y=4.5, label=paste0("r = ", r1), hjust=0) +
+  annotate("text", x=20, y=4.25, label=paste0("p = ", round(p1, 3)), hjust=0) +
+  theme_classic() 
+
+
+r2 <- round(cor(Xdata1$H_TIIP_1, Xdata1$H_TIIP_3), 2)
+p2 <- cor.test(Xdata1$H_TIIP_1, Xdata1$H_TIIP_3)$p.value
+r2
+p2
+ggplot(Xdata1, aes(y=H_TIIP_1, x=H_TIIP_3)) + 
+  geom_point() + 
+  geom_smooth(method="lm", col="black") + 
+  annotate("text", x=20, y=4.5, label=paste0("r = ", r2), hjust=0) +
+  annotate("text", x=20, y=4.25, label=paste0("p = ", round(p2, 3)), hjust=0) +
+  theme_classic() 
+
+r3 <- round(cor(Xdata1$H_TIIP_2, Xdata1$H_TIIP_3), 2)
+p3 <- cor.test(Xdata1$H_TIIP_2, Xdata1$H_TIIP_3)$p.value
+r3
+p3
+ggplot(Xdata1, aes(y=H_TIIP_2, x=H_TIIP_3)) + 
+  geom_point() + 
+  geom_smooth(method="lm", col="black") + 
+  annotate("text", x=20, y=4.5, label=paste0("r = ", r3), hjust=0) +
+  annotate("text", x=20, y=4.25, label=paste0("p = ", round(p3, 3)), hjust=0) +
+  theme_classic() 
+```
+
+
+# human TIIPOS vs TIIP
+```{r}
+
+Xdata1.sub1 <- Xdata1[c("gene_id","H_TIIP_1","H_TIIP_2","H_TIIP_3","H_TIIPOS_1","H_TIIPOS_2","H_TIIPOS_3")]
+
+######### DEGs #######################
+
+groups = as.factor(c(rep("TIIP",3), rep("TIIPOS",3)))
+genes <- Xdata1.sub1$gene_id
+names(genes) <- genes
+Xdata1.sub1$gene_id <- NULL
+
+counts.DGEList <- DGEList(counts = Xdata1.sub1, genes = genes, group = groups)
+counts.keep <- filterByExpr(y = counts.DGEList)
+counts.DGEList <- counts.DGEList[counts.keep, , keep.lib.sizes = FALSE]
+counts.DGEList <- calcNormFactors(counts.DGEList)
+counts.DGEList <- estimateDisp(counts.DGEList,design = model.matrix(~groups))
+TIIP_TIIPOS.DGEExact <- exactTest(counts.DGEList, pair = c("TIIP","TIIPOS"))
+DEGlist <- cbind(TIIP_TIIPOS.DGEExact$genes, TIIP_TIIPOS.DGEExact$table)
+
+write.csv(DEGlist, file="~/Anjali_data/pneumocytes_data/output_files/human_TIIPOS_vs_TIIP_DEGlist.csv")
+
+
+pdf("~/Anjali_data/pneumocytes_data/plots/human_TIIPOS_vs_TIIP_volcano_DEG.pdf", height = 10, width = 12, bg ="white")
+EnhancedVolcano(DEGlist,subtitle = "",lab = DEGlist$genes, x = 'logFC',y = 'PValue',title = 'Human TIIPOS versus TIIP',
+    pCutoff = 10e-6,FCcutoff = 1,pointSize = 1.0,labSize = 4.0, colAlpha = 1,col = c("#747678",  "#F0AB00", "#CD202C","#2A6EBB"),
+  legendPosition = "bottom",drawConnectors = T, raster = T, arrowheads = F)
+
+dev.off()
+
+########## PATHWAY ################
+
+msigdbr_df <- msigdbr(species = "human", collection =  "H")
+msigdbr_list = split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)
+ranks <- TIIP_TIIPOS.DGEExact$table$logFC
+names(ranks) <- counts.DGEList$genes$genes
+ranks <- sort(ranks, decreasing = T)
+gsea_res <- GSEA(geneList = ranks, TERM2GENE = subset(msigdbr_df, select = c("gs_name","gene_symbol")),pvalueCutoff = 1)
+
+fgseaResTidy_OS <- gsea_res %>%as_tibble() %>%arrange(desc(NES))
+
+write.csv(fgseaResTidy_OS,file="~/Anjali_data/pneumocytes_data/output_files/human_TIIPOS_vs_TIIP_fgsea_pathways.csv")
+
+p1 <- ggplot(fgseaResTidy_OS, aes(reorder(ID, NES), NES)) +
+geom_col(aes(fill=p.adjust < 0.05)) +
+coord_flip() +
+labs(x="Pathway", y="Normalized Enrichment Score",title="Human \"TIIPOS vs TIIP\" Hallmark pathways NES from GSEA") +  theme_minimal()+scale_fill_manual(values=c("#999999", "#E69F00"))
+
+pdf("~/Anjali_data/pneumocytes_data/plots/human_TIIPOS_vs_TIIP_pathways.pdf", height = 8, width = 9)
+print(p1)
+dev.off()
+
+fgseaRes <- fgsea(pathways = msigdbr_list, 
+                  stats    = ranks,
+                  minSize  = 15,
+                  maxSize  = 500)
+
+# filter only significan one 
+
+topPathwaysUp <- fgseaRes[ES > 0 & pval<=0.05][head(order(pval), n=10), pathway] # pathways up in low DFI 
+topPathwaysDown <- fgseaRes[ES < 0 & pval<= 0.05][head(order(pval), n=10), pathway] # pathways down in low DFI 
+topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
+
+pdf("~/Anjali_data/pneumocytes_data/plots/human_TIIPOS_vs_TIIP_top_pathways.pdf", width = 12, height = 4, bg = "white")
+plotGseaTable(msigdbr_list[topPathways], ranks, fgseaRes,gseaParam=0.5)
+
+
+dev.off()
+```
+
+
+# upadted fig
+```{r}
+
+DEGlist <- read.csv(file="~/Anjali_data/pneumocytes_data/output_files/human_TIIPOS_vs_TIIP_DEGlist.csv")
+DEGlist <- DEGlist[,-1]
+
+msigdbr_df <- msigdbr(species = "human", collection =  "H")
+msigdbr_list = split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)
+
+ranks <- DEGlist$logFC
+names(ranks) <- DEGlist$genes
+ranks <- sort(ranks, decreasing = T)
+
+fgseaRes <- fgsea(pathways = msigdbr_list,
+                  stats    = ranks,
+                  minSize  = 15,
+                  maxSize  = 500)
+saveRDS(fgseaRes,file="~/Anjali_data/pneumocytes_data/output_files/human_TIIPOS_vs_TIIP_top_pathways_withsigpval.rds")
+fgseaRes <- human_TIIPOS_vs_TIIP_top_pathways_withsigpval
+
+fgseaRes <- fgseaRes[pval < 0.05]
+fgseaRes <- fgseaRes[ES > 0]
+
+# Add a -log10 adjusted p-value metric for plotting
+fgseaRes$logP <- -log10(fgseaRes$pval)
+
+p <- ggplot(fgseaRes, aes(x = reorder(pathway, logP), y = logP, fill = NES)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    x = "Pathway",
+    y = "-log10(pval)",
+    fill = "NES",
+    title = "Top Enriched Significant Pathways"
+  ) +scale_fill_bs5("red")+theme_classic()+
+   theme(
+axis.title.x = element_text(color="black", size=14, face="bold"),
+axis.title.y = element_text(color="black", size=14, face="bold"),
+axis.text.x = element_text(color="black", size=14, face="bold"),
+axis.text.y = element_text(color="black", size=12, face="bold"),
+axis.line = element_line(colour = "black",size = 1, linetype = "solid"))
+
+pdf("~/Anjali_data/pneumocytes_data/plots/human_TIIPOS_vs_TIIP_top_pathways_withsigpval2.pdf", width = 8, height = 4, bg = "white")
+p
+
+```
+
+
+
+# human TIIP vs OS
+```{r}
+Xdata1.sub2 <- Xdata1[c("gene_id","H_OS_1","H_OS_2","H_OS_3","H_TIIP_1","H_TIIP_2","H_TIIP_3")]
+
+######### DEGs #######################
+
+groups = as.factor(c(rep("OS",3), rep("TIIP",3)))
+genes <- Xdata1.sub2$gene_id
+names(genes) <- genes
+Xdata1.sub2$gene_id <- NULL
+
+counts.DGEList <- DGEList(counts = Xdata1.sub2, genes = genes, group = groups)
+counts.keep <- filterByExpr(y = counts.DGEList)
+counts.DGEList <- counts.DGEList[counts.keep, , keep.lib.sizes = FALSE]
+counts.DGEList <- calcNormFactors(counts.DGEList)
+counts.DGEList <- estimateDisp(counts.DGEList,design = model.matrix(~groups))
+TIIP_TIIPOS.DGEExact <- exactTest(counts.DGEList, pair = c("OS","TIIP"))
+DEGlist <- cbind(TIIP_TIIPOS.DGEExact$genes, TIIP_TIIPOS.DGEExact$table)
+
+write.csv(DEGlist, file="~/Anjali_data/pneumocytes_data/output_files/human_TIIP_vs_OS_DEGlist.csv")
+
+pdf("~/Anjali_data/pneumocytes_data/plots/human_TIIP_vs_OS_volcano_DEG.pdf", height = 10, width = 12, bg ="white")
+EnhancedVolcano(DEGlist,subtitle = "",lab = DEGlist$genes, x = 'logFC',y = 'PValue',title = 'Human TIIP versus OS',
+    pCutoff = 10e-6,FCcutoff = 1,pointSize = 1.0,labSize = 4.0, colAlpha = 1,col = c("#747678",  "#F0AB00", "#CD202C","#2A6EBB"),
+  legendPosition = "bottom",drawConnectors = T, raster = T, arrowheads = F)
+
+dev.off()
+```
+
+
